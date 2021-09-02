@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>communication</name>
+  <version>0.0.0</version>
+  <description>communication for d435+t265+aliengo</description>
+  <maintainer email="xxx@xxx.com">xxx</maintainer>
+  <license>BSD</license>
+  <url type="website">xxx</url>
+  <author email="xxx@xxx.com">xxx</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+<!--   <build_depend>cmake_clang_tools</build_depend> -->
+
+  <depend>boost</depend>
+  <depend>eigen</depend>
+  <depend>eigen_conversions</depend>
+  <depend>grid_map_core</depend>
+  <depend>grid_map_ros</depend>
+  <depend>grid_map_msgs</depend>
+  <depend>message_filters</depend>
+  <depend>pcl_ros</depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf</depend>
+  <depend>tf_conversions</depend>
+  <depend>kdl_parser</depend>
+
+</package>

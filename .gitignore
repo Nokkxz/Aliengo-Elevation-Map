@@ -1,0 +1,10 @@
+/*
+
+!/.gitignore
+
+!/src
+/src/*
+!/src/aliengo_description/
+!/src/communication/
+!/src/elevation_mapping/
+!/src/elevation_mapping_demos/

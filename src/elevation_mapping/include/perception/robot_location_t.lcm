@@ -1,0 +1,5 @@
+struct robot_location_t
+{
+  double quat[4]; 
+  double pos_vo[3];
+}

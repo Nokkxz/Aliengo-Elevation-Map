@@ -1,0 +1,4 @@
+struct joint_positions_t
+{
+  double joint_pos[12];
+}
