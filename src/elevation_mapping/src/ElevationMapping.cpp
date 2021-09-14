@@ -307,7 +307,7 @@ void ElevationMapping::visibilityCleanupThread() {
     loopRate.sleep();
   }
 }
-
+bool _first_time_ = true;
 void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
                                           const SensorProcessorBase::Ptr& sensorProcessor_) {
   ROS_DEBUG("Processing data from: %s", pointCloudMsg->header.frame_id.c_str());
@@ -369,6 +369,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   // Process point cloud.
   PointCloudType::Ptr pointCloudProcessed(new PointCloudType);
   Eigen::VectorXf measurementVariances;
+  if (true) {
   if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances,
                                  pointCloudMsg->header.frame_id)) {
     if (!sensorProcessor_->isTfAvailableInBuffer()) {
@@ -378,6 +379,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     ROS_ERROR("Point cloud could not be processed.");
     resetMapUpdateTimer();
     return;
+  }
   }
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
@@ -405,14 +407,18 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     resetMapUpdateTimer();
     return;
   }
+  
+  _first_time_ = false;
 
   if (publishPointCloud) {
     // Publish elevation map.
-    map_.publishRawElevationMap();
-    if (isFusingEnabled()) {
-      // map_.fuseAll();
-      // map_.publishFusedElevationMap();
-    }
+    // map_.publishRawElevationMap();
+    map_.fuseAll();
+    map_.publishFusedElevationMap();
+    // if (isFusingEnabled()) {
+    //   map_.fuseAll();
+    //   map_.publishFusedElevationMap();
+    // }
   }
 
   resetMapUpdateTimer();

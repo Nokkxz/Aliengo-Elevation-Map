@@ -15,7 +15,7 @@
   <arg name="color_fps"                 default="60"/>
 
   <arg name="depth_width"               default="424"/>
-  <arg name="depth_height"              default="240"/>
+  <arg name="depth_height"              default="240"/>        
   <arg name="depth_fps"                 default="60"/>
   <arg name="align_depth"               default="true"/>
 

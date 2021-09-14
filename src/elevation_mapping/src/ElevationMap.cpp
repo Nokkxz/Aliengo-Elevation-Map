@@ -589,11 +589,11 @@ bool ElevationMap::publishFusedElevationMap() {
   fusedMapCopy.erase("variance");
   fusedMapCopy.erase("color");
 
-  grid_map_msgs::GridMap message;
-  grid_map::GridMapRosConverter::toMessage(fusedMapCopy, message);
-  elevationMapFusedPublisher_.publish(message);
-  return true;
-  // return postprocessorPool_.runTask(fusedMapCopy);
+  // grid_map_msgs::GridMap message;
+  // grid_map::GridMapRosConverter::toMessage(fusedMapCopy, message);
+  // elevationMapFusedPublisher_.publish(message);
+  // return true;
+  return postprocessorPool_.runTask(fusedMapCopy);
 }
 
 bool ElevationMap::publishVisibilityCleanupMap() {

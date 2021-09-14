@@ -1,7 +1,7 @@
 struct height_map_t
 {
   float resolution;
-  float ele_map[100][100];
-  float trav_map[100][100];
+  float ele_map[70][70];
+  float cost_map[70][70];
   float map_center[2];
 }

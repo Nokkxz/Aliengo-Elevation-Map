@@ -68,7 +68,7 @@ postprocessor_pipeline: # set by postprocessor_pipeline_name
   #     edge_handling: mean # options: inside, crop, empty, mean
   #     window_size: 3 # Make sure to make this compatible with the kernel matrix.
 
-  # # Compute traversability as normalized weighted sum of slope and roughness.
+  # Compute traversability as normalized weighted sum of slope and roughness.
   - name: traversability
     type: gridMapFilters/MathExpressionFilter
     params:
@@ -84,7 +84,7 @@ postprocessor_pipeline: # set by postprocessor_pipeline_name
       lower_threshold: 0.8
       set_to: 0.0
 
-  # # Set upper threshold on traversability.
+  # Set upper threshold on traversability.
   - name: traversability_upper_threshold
     type: gridMapFilters/ThresholdFilter
     params:

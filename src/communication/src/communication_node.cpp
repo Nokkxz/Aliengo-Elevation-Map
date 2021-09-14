@@ -12,8 +12,10 @@
 
 #include "perception/height_map_t.hpp"
 #include "perception/robot_location_t.hpp"
-#include "perception/joint_positions_t.hpp"
+#include "perception/leg_control_data_lcmt.hpp"
 #include "csignal"
+
+#include <thread>
 
 
 class Communication
@@ -21,6 +23,7 @@ class Communication
 private:
   ros::NodeHandle nh_;
   ros::Timer timer_;
+  ros::Timer timer2_;
   ros::Subscriber pose_sub_;
   ros::Subscriber map_sub_;
   ros::Subscriber pc_sub_;
@@ -33,7 +36,7 @@ private:
   lcm::LCM lcm_;
   robot_location_t lcm_loc_;
   height_map_t lcm_map_;
-  joint_positions_t lcm_joint_;
+  leg_control_data_lcmt lcm_control_data_;
 
   int map_cnt_;
   int pc_cnt_;
@@ -42,13 +45,12 @@ private:
   std::string robot_desc_string_;
   KDL::Tree kdl_tree_;
   robot_state_publisher::RobotStatePublisher* rs_pub_p_;
-  std::map<std::string, double> joint_pos_;
-
 
 public:
   Communication()
   {
     timer_ = nh_.createTimer(ros::Duration(1), &Communication::handle_timer, this);
+    timer2_ = nh_.createTimer(ros::Duration(0.01), &Communication::handle_timer2, this);
     pose_sub_ = nh_.subscribe("/t265/odom/sample", 10, &Communication::handle_pose_sub, this);
     map_sub_ = nh_.subscribe("/elevation_mapping/elevation_map_raw", 10, &Communication::handle_map_sub, this);
     pc_sub_ = nh_.subscribe("/d400/depth/color/points", 10, &Communication::handle_pc_sub, this);
@@ -62,6 +64,7 @@ public:
       ROS_ERROR("Failed to construct kdl tree");
     }
     rs_pub_p_ = new robot_state_publisher::RobotStatePublisher(kdl_tree_);
+
   }
 
   void handle_pose_sub(const nav_msgs::Odometry::ConstPtr& msg)
@@ -88,8 +91,8 @@ public:
     lcm_map_.map_center[0] = map_.getPosition()(0);
     lcm_map_.map_center[1] = map_.getPosition()(1);
     lcm_map_.resolution = map_.getResolution();
-    // memcpy(&lcm_map_.ele_map[0][0], map_.get("elevation_inpainted").data(), sizeof(lcm_map_.ele_map));
-    // memcpy(&lcm_map_.trav_map[0][0], map_.get("traversability").data(), sizeof(lcm_map_.trav_map));
+    memcpy(&lcm_map_.ele_map[0][0], map_.get("elevation_inpainted").data(), sizeof(lcm_map_.ele_map));
+    memcpy(&lcm_map_.cost_map[0][0], map_.get("traversability").data(), sizeof(lcm_map_.cost_map));
 
     lcm_.publish("height_map", &lcm_map_);
   }
@@ -105,50 +108,52 @@ public:
     map_cnt_ = 0;
     pc_cnt_ = 0;
     loc_cnt_ = 0;
-
-    float thigh = 0.6, calf = -1.15;
-    lcm_joint_.joint_pos[0] = 0;
-    lcm_joint_.joint_pos[1] = thigh;
-    lcm_joint_.joint_pos[2] = calf;
-    lcm_joint_.joint_pos[3] = 0;
-    lcm_joint_.joint_pos[4] = thigh;
-    lcm_joint_.joint_pos[5] = calf;
-    lcm_joint_.joint_pos[6] = 0;
-    lcm_joint_.joint_pos[7] = thigh;
-    lcm_joint_.joint_pos[8] = calf;
-    lcm_joint_.joint_pos[9] = 0;
-    lcm_joint_.joint_pos[10] = thigh;
-    lcm_joint_.joint_pos[11] = calf;
-    lcm_.publish("joint_positions", &lcm_joint_);
   }
 
-  void handle_joint_positions(const lcm::ReceiveBuffer* rbuf, const std::string& chan, const joint_positions_t* msg)
+  void handle_timer2(const ros::TimerEvent&)
   {
-    joint_pos_.insert(std::make_pair("FR_hip_joint", msg->joint_pos[0]));
-    joint_pos_.insert(std::make_pair("FR_thigh_joint", msg->joint_pos[1]));
-    joint_pos_.insert(std::make_pair("FR_calf_joint", msg->joint_pos[2]));
-    joint_pos_.insert(std::make_pair("FL_hip_joint", msg->joint_pos[3]));
-    joint_pos_.insert(std::make_pair("FL_thigh_joint", msg->joint_pos[4]));
-    joint_pos_.insert(std::make_pair("FL_calf_joint", msg->joint_pos[5]));
-    joint_pos_.insert(std::make_pair("RR_hip_joint", msg->joint_pos[6]));
-    joint_pos_.insert(std::make_pair("RR_thigh_joint", msg->joint_pos[7]));
-    joint_pos_.insert(std::make_pair("RR_calf_joint", msg->joint_pos[8]));
-    joint_pos_.insert(std::make_pair("RL_hip_joint", msg->joint_pos[9]));
-    joint_pos_.insert(std::make_pair("RL_thigh_joint", msg->joint_pos[10]));
-    joint_pos_.insert(std::make_pair("RL_calf_joint", msg->joint_pos[11]));
-    rs_pub_p_->publishTransforms(joint_pos_, ros::Time::now(), "");
+    float thigh = -0.6, calf = 1.15;
+    lcm_control_data_.q[0] = 0;
+    lcm_control_data_.q[1] = thigh;
+    lcm_control_data_.q[2] = calf;
+    lcm_control_data_.q[3] = 0;
+    lcm_control_data_.q[4] = thigh;
+    lcm_control_data_.q[5] = calf;
+    lcm_control_data_.q[6] = 0;
+    lcm_control_data_.q[7] = thigh;
+    lcm_control_data_.q[8] = calf;
+    lcm_control_data_.q[9] = 0;
+    lcm_control_data_.q[10] = thigh;
+    lcm_control_data_.q[11] = calf;
+    lcm_.publish("leg_control_data", &lcm_control_data_);
+  }
+
+  void handle_joint_positions(const lcm::ReceiveBuffer* rbuf, const std::string& chan, const leg_control_data_lcmt* msg)
+  {
+    std::map<std::string, double> joint_pos;
+    joint_pos.insert(std::make_pair("FR_hip_joint", msg->q[0]));
+    joint_pos.insert(std::make_pair("FR_thigh_joint", -msg->q[1]));
+    joint_pos.insert(std::make_pair("FR_calf_joint", -msg->q[2]));
+    joint_pos.insert(std::make_pair("FL_hip_joint", msg->q[3]));
+    joint_pos.insert(std::make_pair("FL_thigh_joint", -msg->q[4]));
+    joint_pos.insert(std::make_pair("FL_calf_joint", -msg->q[5]));
+    joint_pos.insert(std::make_pair("RR_hip_joint", msg->q[6]));
+    joint_pos.insert(std::make_pair("RR_thigh_joint", -msg->q[7]));
+    joint_pos.insert(std::make_pair("RR_calf_joint", -msg->q[8]));
+    joint_pos.insert(std::make_pair("RL_hip_joint", msg->q[9]));
+    joint_pos.insert(std::make_pair("RL_thigh_joint", -msg->q[10]));
+    joint_pos.insert(std::make_pair("RL_calf_joint", -msg->q[11]));
+    rs_pub_p_->publishTransforms(joint_pos, ros::Time::now(), "");
   }
 
   void handle_robot_location(const lcm::ReceiveBuffer* rbuf, const std::string& chan, const robot_location_t* msg)
   {
     loc_cnt_++;
-    // ROS_INFO("handle_robot_location");
   }
 
   void handle_height_map(const lcm::ReceiveBuffer* rbuf, const std::string& chan, const height_map_t* msg)
   {
     map_cnt_++;
-    // ROS_INFO("handle_height_map");
   }
 
   ~Communication()
@@ -169,9 +174,10 @@ int main(int argc, char **argv)
   signal(SIGINT, handle_signal);
   signal(SIGTERM, handle_signal);
   lcm::LCM lcm;
-  lcm.subscribe("joint_positions", &Communication::handle_joint_positions, &communication);
+  lcm.subscribe("leg_control_data", &Communication::handle_joint_positions, &communication);
   lcm.subscribe("robot_location", &Communication::handle_robot_location, &communication);
   lcm.subscribe("height_map", &Communication::handle_height_map, &communication);
+
   ros::AsyncSpinner async_spinner(1);
   async_spinner.start();
   while(ros::ok() && 0==lcm.handle());
